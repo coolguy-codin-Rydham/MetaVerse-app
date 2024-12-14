@@ -1,51 +1,76 @@
-import client from "@repo/db/client"
+import client from "@repo/db/client";
 import { userMiddleware } from "../../middlewares/user.js";
 import { Router } from "express";
 export const userRouter = Router();
 
-userRouter.post("/metadata",userMiddleware, async(req, res)=>{
+userRouter.post("/metadata", userMiddleware, async (req, res) => {
     const parsedData = req.body;
-
-    if(!parsedData || !parsedData.avatarId){
-        res.status(400).json({
-            message:"Validation failed"
-        })
+    console.log("\n\n\n\nUser Id:", req.userId, "\n\n\n")
+    if (!parsedData || !parsedData.avatarId) {
+        return res.status(400).json({
+            message: "Validation failed"
+        });
     }
-
-    await client.user.update({
+   try{
+    const user = await client.user.findMany({
         where:{
             id: req.userId
-        },
-        data:{
-            avatarId:parsedData.avatarId
         }
-    })
-
-    res.json({
-        message:"Metadata Updated"
-    })
-})
-
-userRouter.get("/metadata/bulk", async(req, res)=>{
-    const userIds  = (req.query.userIds ?? "[]").slice(1, req.query.userIds?.length-2).split(",");
-
-    const metadata = await client.user.findMany({
+    });
+    console.log("User: " , user)
+    await client.user.update({
         where:{
-            id:{
-                in:userIds
-            }
-        }, select:{
-            avatar:true
+            id: req.userId,
+
+        },
+        data: {
+            avatarId: parsedData.avatarId
         }
     })
-
-    res.json({
-        avatars:metadata.map(m=>({
-            userId: m.id,
-            avatarId: m.avatar?.imageUrl
-        }))
+    res.status(200).json({
+        message: "Metadata Updated"
     })
+   }catch(e){
+    console.log(e);
+    res.status(400).json({
+        message: "Internal Server Error"
+    })
+   }
+});
 
-})
+
+userRouter.get("/metadata/bulk", async (req, res) => {
+    const userIds = (req.query.ids ?? "")
+      .replace(/^\[|\]$/g, "")
+      .split(",")
+      .filter(Boolean); 
+    
+    console.log(userIds); 
+    console.log(req.query);
+    const metadata = await client.user.findMany({
+        where: {
+          id: {
+            in: userIds,
+          },
+        },
+        select: {
+          id: true, // Include the `id` field
+          avatar: {
+            select: {
+              imageUrl: true,
+            },
+          },
+        },
+      });
+      
+  console.log(metadata);
+
+  res.status(200).json({
+    avatars: metadata.map((m) => ({
+      userId: m.id,
+      avatarId: m.avatar?.imageUrl,
+    })),
+  });
+});
 
 // /api/v1/user/metadata/bulk?userIds=[1,3,51]

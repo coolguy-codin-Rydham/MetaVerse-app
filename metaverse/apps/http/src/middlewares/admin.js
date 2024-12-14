@@ -1,4 +1,4 @@
-import { JWT_PASSWORD } from "../config";
+import { JWT_PASSWORD } from "../config.js";
 import jwt from "jsonwebtoken";
 
 export const adminMiddleware = (req, res, next) => {
@@ -28,7 +28,3 @@ export const adminMiddleware = (req, res, next) => {
   }
 };
 
-
-export{ 
-    adminMiddleware
-}

@@ -11,7 +11,7 @@ export const router = Router();
 router.post("/signup", async (req, res) => {
   const parsedData = req.body;
 
-  console.log(parsedData)
+  // console.log(parsedData)
 
   if (
     !parsedData ||

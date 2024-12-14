@@ -6,10 +6,11 @@ export const spaceRouter = Router();
 spaceRouter.post("/", userMiddleware, async (req, res) => {
   const parsedData = req.body;
 
-  if (!parsedData) {
-    return res.status(400).json({
+  if (!parsedData || !parsedData.dimensions || !parsedData.name){
+    res.status(400).json({
       message: "Validation Failed",
     });
+    return 
   }
 
   if (!parsedData.mapId) {
@@ -24,6 +25,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
     res.json({
       spaceId: space.id,
     });
+    return ;
   }
 
   const map = client.map.findUnique({
