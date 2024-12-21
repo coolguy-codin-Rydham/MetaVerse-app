@@ -28,7 +28,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
     return ;
   }
 
-  const map = client.map.findUnique({
+  const map = await client.map.findUnique({
     where: {
       id: parsedData.mapId,
     },
@@ -45,7 +45,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
     });
   }
 
-  await client.$transaction(async () => {
+  let space = await client.$transaction(async () => {
     const space = await client.space.create({
       data: {
         name: parsedData.name,
@@ -70,39 +70,71 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
   });
 });
 
-spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
-  const space = await client.space.findUnique({
-    where: {
-      id: req.params.spaceId,
-    },
-    select: {
-      creatorId: true,
-    },
-  });
-
-  if (!space) {
+spaceRouter.delete("/element", userMiddleware, async (req, res) => {
+  const parsedData = req.body
+  
+  if(!parsedData || !parsedData.id){
     res.status(400).json({
-      message: "Space Not Found",
-    });
-    return;
+      message: "Validation Failed"
+    })
   }
 
-  if (space?.creatorId !== req.userId) {
-    res.status(403).json({
-      message: "Unauthorized",
-    });
-    return;
-  }
-
-  await client.space.delete({
-    where: {
-      id: req.params.spaceId,
+  const spaceElement = await client.spaceElements.findFirst({
+    where:{
+      id: parsedData.id, 
     },
-  });
+    include:{
+      space: true
+    }
+  })
+
+  if(spaceElement?.space.creatorId || spaceElement.space.creatorId!==req.userId){
+    res.status(403).json({
+      message:"Unauthorized"
+    })
+  }
+
+  await client.spaceElements.delete({
+    where: {
+      id: parsedData.id
+    }
+  })
+
   res.json({
     message: "Space deleted",
   });
 });
+
+spaceRouter.delete("/:spaceId", userMiddleware, async(req, res)=>{
+  const space = await client.space.findUnique({
+    where: {
+      id: req.params.spaceId
+    },select:{
+      creatorId: true
+    }
+  })
+
+  if(!space){
+    res.status(400).json({
+      message:"Space Not Found"
+    })
+    return ;
+  }
+
+  if(space.creatorId!=req.userId){
+    res.status(403).json({
+      message:"Unauthorized"
+    })
+    return ;
+  }
+
+  await client.space.delete({
+    where:{
+      id: req.params.spaceId
+    }
+  })
+  res.json({message:"Space Deleted"})
+})
 
 spaceRouter.get("/all", userMiddleware, async (req, res) => {
   const spaces = await client.space.findMany({
@@ -126,7 +158,10 @@ spaceRouter.post("/element",userMiddleware, async (req, res) => {
   const parsedData = req.body;
   if(!parsedData || !parsedData.spaceId){
     res.status(400).json({message:"Validation Failed"})
+    return ;
   }
+
+
   const space = await client.space.findUnique({
     where: {
       id:parsedData.spaceId, 
@@ -137,11 +172,19 @@ spaceRouter.post("/element",userMiddleware, async (req, res) => {
       height: true,
     }
   })
+
+
   if(!space){
     res.status(400).json({
       message: "Space Not Found"
     })
+    return;
   }
+
+  if(req.body.x < 0 || req.body.y < 0 || req.body.x > space?.width || req.body.y > space?.height) {
+    res.status(400).json({message: "Point is outside of the boundary"})
+    return
+}
 
   await client.spaceElements.create({
     data: {
@@ -158,40 +201,6 @@ spaceRouter.post("/element",userMiddleware, async (req, res) => {
   })
 });
 
-spaceRouter.delete("/element",userMiddleware, async(req, res) => {
-  const parsedData = req.body;
-  if(!parsedData){
-    res.status(400).json({
-      message : "Validation Failed"
-    })
-  }
-  const spaceElement = await client.spaceElements.findFirst({
-    where: {
-      id: parsedData.id,
-    },
-    include:{
-      space:true, 
-    }
-  })
-
-  if(!spaceElement?.space.creatorId || spaceElement.space.creatorId!==req.userId){
-    res.status(403).json({
-      message: "Unauthorized"
-    })
-    return ;
-  }
-
-  await client.spaceElements.delete({
-    where: {
-      id: parsedData.id
-    }
-  })
-
-  res.json({
-    message:"Element Deleted"
-  })
-});
-
 spaceRouter.get("/:spaceId", async(req, res) => {
   const space = await client.space.findUnique({
     where: {
@@ -200,11 +209,13 @@ spaceRouter.get("/:spaceId", async(req, res) => {
     include:{
       elements: {
         include:{
-          element: true, 
+          element: true
         }
       },
     }
   })
+
+  console.log(space)
 
   if(!space){
     res.status(400).json({
@@ -213,7 +224,7 @@ spaceRouter.get("/:spaceId", async(req, res) => {
     return 
   }
 
-  res.json({
+  const responseData = {
     "dimensions":`${space.width}x${space.height}`,
     elements: space.elements.map(e=>({
         id: e.id, 
@@ -226,6 +237,11 @@ spaceRouter.get("/:spaceId", async(req, res) => {
         },
         x: e.x, 
         y: e.y
-      })),
-  })
+      })
+    ),
+  }
+
+  console.log("To Check :", responseData)
+
+  res.json(responseData)
 });

@@ -3,13 +3,27 @@ import client from "@repo/db/client";
 import { adminMiddleware } from "../../middlewares/admin.js";
 export const adminRouter = Router();
 
-adminRouter.post("/element", adminMiddleware, async (req, res) => {
+adminRouter.use(adminMiddleware);
+
+adminRouter.post("/element", async (req, res) => {
+  // console.log("userId", req.userId)
   const parsedData = req.body;
-  if (!parsedData) {
+  if (!parsedData || !parsedData.width || !parsedData.height || !parsedData.static || !parsedData.imageUrl) {
     res.status(400).json({
       message: "Validation Failed",
     });
   }
+
+  console.log("ParsedData", [parsedData.width, parsedData.height, parsedData.static, parsedData.imageUrl]);
+
+  const data= {
+    width: parsedData.width,
+    height: parsedData.height,
+    static: parsedData.static,
+    imageUrl: parsedData.imageUrl,
+  }
+
+  console.log("Element create data: ", data)
 
   const element = await client.element.create({
     data: {
@@ -20,12 +34,14 @@ adminRouter.post("/element", adminMiddleware, async (req, res) => {
     },
   });
 
+  console.log("Element in DB return: ", element)
+
   res.json({
     id: element.id,
   });
 });
 
-adminRouter.put("/element/:elementId", adminMiddleware, async (req, res) => {
+adminRouter.put("/element/:elementId", async (req, res) => {
   const parsedData = req.body;
 
   if (!parsedData) {
@@ -61,7 +77,7 @@ adminRouter.post("/avatar", async (req, res) => {
       imageUrl: parsedData.imageUrl,
     },
   });
-  console.log("\n\nAvatar Added", avatar, "\n\n");
+  // console.log("\n\nAvatar Added", avatar, "\n\n");
   res.json({
     id: avatar.id,
   });

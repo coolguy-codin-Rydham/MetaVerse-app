@@ -25,21 +25,36 @@ router.post("/signup", async (req, res) => {
   const hashedPassword = await hash(parsedData.password);
 
   try {
+    const userData = {
+      username: parsedData.username,
+      password: hashedPassword,
+      role: parsedData.type == "admin" ? "Admin" : "User",
+    }
+    // console.log("Parsed Data: ", {username: parsedData.username,
+    //   password: hashedPassword,
+    //   role: parsedData.role
+    // })
+    // console.log("User Data: ", userData);
+
     const user = await client.user.create({
-      data: {
-        username: parsedData.username,
-        password: hashedPassword,
-        role: parsedData.role === "admin" ? "Admin" : "User",
-      },
+      data: userData,
     });
+
+    // console.log("DB Saved User Data");
+
+
     res.json({
       userId: user.id,
     });
+
   } catch (e) {
+
     console.log(e);
+
     res.status(400).json({
       message: "User Already Exists",
     });
+
   }
 });
 
@@ -61,6 +76,8 @@ router.post("/signin", async (req, res) => {
       },
     });
 
+    // console.log(user);
+
     if (!user) {
       res.status(403).json({
         message: "User not found",
@@ -75,6 +92,11 @@ router.post("/signin", async (req, res) => {
         message: "Invalid Password",
       });
     }
+
+    // console.log({
+    //   userId: user.id, 
+    //   role: user.role
+    // })
 
     const token = jwt.sign(
       {
