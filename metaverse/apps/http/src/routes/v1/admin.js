@@ -14,7 +14,7 @@ adminRouter.post("/element", async (req, res) => {
     });
   }
 
-  console.log("ParsedData", [parsedData.width, parsedData.height, parsedData.static, parsedData.imageUrl]);
+  // console.log("ParsedData", [parsedData.width, parsedData.height, parsedData.static, parsedData.imageUrl]);
 
   const data= {
     width: parsedData.width,
@@ -23,7 +23,7 @@ adminRouter.post("/element", async (req, res) => {
     imageUrl: parsedData.imageUrl,
   }
 
-  console.log("Element create data: ", data)
+  // console.log("Element create data: ", data)
 
   const element = await client.element.create({
     data: {
@@ -34,7 +34,7 @@ adminRouter.post("/element", async (req, res) => {
     },
   });
 
-  console.log("Element in DB return: ", element)
+  // console.log("Element in DB return: ", element)
 
   res.json({
     id: element.id,
@@ -91,7 +91,7 @@ adminRouter.post("/map", async (req, res) => {
     });
   }
 
-  const map = client.map.create({
+  const map = await client.map.create({
     data: {
       name: parsedData.name,
       width: parseInt(parsedData.dimensions.split("x")[0]),
@@ -106,6 +106,7 @@ adminRouter.post("/map", async (req, res) => {
       },
     },
   });
+  // console.log("Created Map: ", map)
   res.json({
     id: map.id,
   });

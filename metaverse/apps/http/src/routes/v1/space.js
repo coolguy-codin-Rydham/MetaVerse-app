@@ -14,7 +14,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
   }
 
   if (!parsedData.mapId) {
-    const space = await client.space.create({
+    const spaceFind = await client.space.create({
       data: {
         name: parsedData.name,
         width: parseInt(parsedData.dimensions.split("x")[0]),
@@ -23,7 +23,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
       },
     });
     res.json({
-      spaceId: space.id,
+      spaceId: spaceFind.id,
     });
     return ;
   }
@@ -46,7 +46,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
   }
 
   let space = await client.$transaction(async () => {
-    const space = await client.space.create({
+    const spaceInner = await client.space.create({
       data: {
         name: parsedData.name,
         width: map.width,
@@ -57,51 +57,52 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
 
     await client.spaceElements.createMany({
       data: map.mapElements.map((e) => ({
-        spaceId: space.id,
+        spaceId: spaceInner.id,
         elementId: e.elementId,
         x: e.x,
         y: e.y,
       })),
     });
-    return space;
+    return spaceInner;
   });
+
+  // console.log("Space Created: ", space)
   res.json({
     spaceId: space.id,
   });
 });
-
 spaceRouter.delete("/element", userMiddleware, async (req, res) => {
-  const parsedData = req.body
-  
-  if(!parsedData || !parsedData.id){
-    res.status(400).json({
-      message: "Validation Failed"
-    })
+  const parsedData = req.body;
+
+  if (!parsedData || !parsedData.id) {
+      return res.status(400).json({
+          message: "Validation Failed"
+      });
   }
 
   const spaceElement = await client.spaceElements.findFirst({
-    where:{
-      id: parsedData.id, 
-    },
-    include:{
-      space: true
-    }
-  })
+      where: {
+          id: parsedData.id,
+      },
+      include: {
+          space: true
+      }
+  });
 
-  if(spaceElement?.space.creatorId || spaceElement.space.creatorId!==req.userId){
-    res.status(403).json({
-      message:"Unauthorized"
-    })
+  if (!spaceElement?.space.creatorId || spaceElement.space.creatorId !== req.userId) {
+      return res.status(403).json({
+          message: "Unauthorized"
+      });
   }
 
   await client.spaceElements.delete({
-    where: {
-      id: parsedData.id
-    }
-  })
+      where: {
+          id: parsedData.id
+      }
+  });
 
-  res.json({
-    message: "Space deleted",
+  return res.json({
+      message: "Space deleted",
   });
 });
 
@@ -215,7 +216,7 @@ spaceRouter.get("/:spaceId", async(req, res) => {
     }
   })
 
-  console.log(space)
+  // console.log("Space: " ,space)
 
   if(!space){
     res.status(400).json({
@@ -241,7 +242,7 @@ spaceRouter.get("/:spaceId", async(req, res) => {
     ),
   }
 
-  console.log("To Check :", responseData)
+  // console.log("To Check :", responseData)
 
   res.json(responseData)
 });
